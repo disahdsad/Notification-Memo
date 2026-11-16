@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>メモ通知</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+    background: #f5f6f8;
+    color: #222;
+  }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #444; }
+  input[type="datetime-local"], textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccd;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    transition: opacity .15s;
+  }
+  button:active { opacity: .7; }
+  .btn-primary { background: #3b6ef5; color: #fff; width: 100%; }
+  .btn-perm { background: #ffb020; color: #fff; width: 100%; margin-bottom: 12px; }
+  .btn-small { padding: 6px 10px; font-size: 12px; }
+  .btn-confirm { background: #2bb673; color: #fff; }
+  .btn-delete { background: #eee; color: #c33; }
+  .perm-status { font-size: 13px; color: #666; margin-bottom: 12px; }
+  .perm-status.ok { color: #2bb673; }
+  .perm-status.ng { color: #c33; }
+  .memo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eef;
+  }
+  .memo-item:last-child { border-bottom: none; }
+  .memo-body { flex: 1; min-width: 0; }
+  .memo-text { font-size: 15px; word-break: break-word; margin-bottom: 4px; }
+  .memo-time { font-size: 12px; color: #888; }
+  .memo-item.overdue .memo-text { color: #c33; font-weight: 600; }
+  .memo-item.confirmed { opacity: .45; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-weight: 700;
+  }
+  .badge-wait { background: #e8efff; color: #3b6ef5; }
+  .badge-over { background: #ffe5e5; color: #c33; }
+  .badge-done { background: #e4f7ec; color: #2bb673; }
+  .actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .empty { text-align: center; color: #999; font-size: 14px; padding: 20px 0; }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: #222;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 24px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    max-width: 90vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .inapp-banner {
+    background: #fff4e0;
+    border: 1px solid #ffd08a;
+    color: #8a5a00;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .inapp-banner.show { display: block; }
+</style>
+</head>
+<body>
+
+<h1>📝 メモ通知</h1>
+
+<!-- 通知権限 -->
+<div class="card">
+  <div class="perm-status" id="permStatus">通知権限：確認中…</div>
+  <button class="btn-perm" id="permBtn">🔔 通知を許可する</button>
+  <div class="inapp-banner" id="inappBanner"></div>
+</div>
+
+<!-- 新規メモ -->
+<div class="card">
+  <label for="memoTime">通知日時</label>
+  <input type="datetime-local" id="memoTime">
+  <label for="memoText">メモ内容</label>
+  <textarea id="memoText" placeholder="例：会議の資料を確認する"></textarea>
+  <button class="btn-primary" id="addBtn">＋ メモをセット</button>
+</div>
+
+<!-- メモ一覧 -->
+<div class="card">
+  <label style="margin-bottom:12px;">セット済みメモ</label>
+  <div id="memoList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "memo_notifier_memos_v1";
+  const BASE_TITLE = "メモ通知";
+  const CHECK_INTERVAL = 10000; // 10秒ごとの見逃しチェック
+
+  let memos = [];
+  let timers = {}; // id -> timeoutId
+
+  const $ = (id) => document.getElementById(id);
+  const memoListEl = $("memoList");
+  const memoTimeEl = $("memoTime");
+  const memoTextEl = $("memoText");
+  const permStatusEl = $("permStatus");
+  const permBtn = $("permBtn");
+  const inappBanner = $("inappBanner");
+
+  // ---------- ユーティリティ ----------
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+
+  // datetime-local 形式 (YYYY-MM-DDTHH:mm) に変換
+  function toLocalInputValue(d) {
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate())
+      + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function formatTime(iso) {
+    const d = new Date(iso);
+    return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate())
+      + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  // ---------- 永続化 ----------
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      memos = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(memos)) memos = [];
+    } catch (e) {
+      memos = [];
+    }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+  }
+
+  // ---------- 通知 ----------
+  function canNotify() {
+    return "Notification" in window && Notification.permission === "granted";
+  }
+
+  function showInApp(title, body) {
+    inappBanner.textContent = "🔔 " + title + "：" + body;
+    inappBanner.classList.add("show");
+    showToast("🔔 " + body);
+    clearTimeout(showInApp._t);
+    showInApp._t = setTimeout(() => inappBanner.classList.remove("show"), 8000);
+  }
+
+  function showToast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => t.classList.remove("show"), 2500);
+  }
+
+  function fireNotification(memo) {
+    if (memo.notified) return;
+    memo.notified = true;
+    memo.notifiedAt = new Date().toISOString();
+    save();
+
+    if (canNotify()) {
+      try {
+        const n = new Notification("⏰ メモの時間です", {
+          body: memo.text,
+          tag: "memo-" + memo.id,
+          requireInteraction: true
+        });
+        n.onclick = function () {
+          window.focus();
+          n.close();
+        };
+      } catch (e) {
+        showInApp("メモの時間です", memo.text);
+      }
+    } else {
+      showInApp("メモの時間です", memo.text);
+    }
+
+    render();
+    updateTitle();
+  }
+
+  // ---------- スケジューリング ----------
+  function clearAllTimers() {
+    Object.values(timers).forEach(clearTimeout);
+    timers = {};
+  }
+
+  function scheduleAll() {
+    clearAllTimers();
+    const now = Date.now();
+    memos.forEach(function (m) {
+      if (m.notified || m.confirmed) return;
+      const target = new Date(m.datetime).getTime();
+      const delay = target - now;
+      if (delay <= 0) {
+        // 既に時刻超過 → 即通知
+        fireNotification(m);
+      } else if (delay <= 2147483647) { // setTimeout の上限対策
+        timers[m.id] = setTimeout(function () {
+          delete timers[m.id];
+          fireNotification(m);
+        }, delay);
+      }
+    });
+  }
+
+  // 見逃しチェック（バックグラウンドでのタイマー間引き対策）
+  function checkOverdue() {
+    let changed = false;
+    const now = Date.now();
+    memos.forEach(function (m) {
+      if (!m.notified && !m.confirmed && new Date(m.datetime).getTime() <= now) {
+        fireNotification(m);
+        changed = true;
+      }
+    });
+    if (changed) { render(); updateTitle(); }
+  }
+
+  // ---------- タイトル更新 ----------
+  function updateTitle() {
+    const n = memos.filter(function (m) {
+      return m.notified && !m.confirmed;
+    }).length;
+    document.title = (n > 0 ? "(" + n + ") " : "") + BASE_TITLE;
+  }
+
+  // ---------- 描画 ----------
+  function render() {
+    memoListEl.innerHTML = "";
+    if (memos.length === 0) {
+      const e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = "まだメモがありません。";
+      memoListEl.appendChild(e);
+      return;
+    }
+
+    // 未確認 → 通知時刻順
+    const sorted = memos.slice().sort(function (a, b) {
+      if (a.confirmed !== b.confirmed) return a.confirmed ? 1 : -1;
+      return new Date(a.datetime) - new Date(b.datetime);
+    });
+
+    const now = Date.now();
+
+    sorted.forEach(function (m) {
+      const overdue = !m.notified && !m.confirmed && new Date(m.datetime).getTime() <= now;
+
+      const item = document.createElement("div");
+      item.className = "memo-item" + (overdue ? " overdue" : "") + (m.confirmed ? " confirmed" : "");
+
+      const body = document.createElement("div");
+      body.className = "memo-body";
+
+      const text = document.createElement("div");
+      text.className = "memo-text";
+      text.textContent = m.text;
+
+      let badge;
+      if (m.confirmed) {
+        badge = '<span class="badge badge-done">確認済み</span>';
+      } else if (m.notified) {
+        badge = '<span class="badge badge-over">未確認</span>';
+      } else if (overdue) {
+        badge = '<span class="badge badge-over">時間超過</span>';
+      } else {
+        badge = '<span class="badge badge-wait">待機中</span>';
+      }
+      text.insertAdjacentHTML("beforeend", badge);
+
+      const time = document.createElement("div");
+      time.className = "memo-time";
+      time.textContent = "⏰ " + formatTime(m.datetime);
+
+      body.appendChild(text);
+      body.appendChild(time);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      if (!m.confirmed) {
+        const confirmBtn = document.createElement("button");
+        confirmBtn.className = "btn-small btn-confirm";
+        confirmBtn.textContent = "確認";
+        confirmBtn.addEventListener("click", function () {
+          m.confirmed = true;
+          m.notified = true;
+          save();
+          render();
+          updateTitle();
+        });
+        actions.appendChild(confirmBtn);
+      }
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn-small btn-delete";
+      delBtn.textContent = "削除";
+      delBtn.addEventListener("click", function () {
+        if (!confirm("このメモを削除しますか？\n「" + m.text + "」")) return;
+        if (timers[m.id]) { clearTimeout(timers[m.id]); delete timers[m.id]; }
+        memos = memos.filter(function (x) { return x.id !== m.id; });
+        save();
+        render();
+        updateTitle();
+      });
+      actions.appendChild(delBtn);
+
+      item.appendChild(body);
+      item.appendChild(actions);
+      memoListEl.appendChild(item);
+    });
+  }
+
+  // ---------- 権限 ----------
+  function updatePermUI() {
+    if (!("Notification" in window)) {
+      permStatusEl.textContent = "このブラウザは通知に対応していません（ページ内バナーで通知します）";
+      permStatusEl.className = "perm-status ng";
+      permBtn.style.display = "none";
+      return;
+    }
+    const p = Notification.permission;
+    if (p === "granted") {
+      permStatusEl.textContent = "通知権限：許可済み ✅";
+      permStatusEl.className = "perm-status ok";
+      permBtn.style.display = "none";
+    } else if (p === "denied") {
+      permStatusEl.textContent = "通知権限：ブロックされています（ブラウザ設定から許可してください）";
+      permStatusEl.className = "perm-status ng";
+      permBtn.style.display = "none";
+    } else {
+      permStatusEl.textContent = "通知権限：未設定";
+      permStatusEl.className = "perm-status";
+      permBtn.style.display = "block";
+    }
+  }
+
+  permBtn.addEventListener("click", function () {
+    if (!("Notification" in window)) return;
+    Notification.requestPermission().then(function () {
+      updatePermUI();
+      if (Notification.permission === "granted") {
+        showToast("通知が許可されました");
+      }
+    });
+  });
+
+  // ---------- 追加 ----------
+  $("addBtn").addEventListener("click", function () {
+    const dtVal = memoTimeEl.value;
+    const text = memoTextEl.value.trim();
+
+    if (!dtVal) { showToast("通知日時を指定してください"); memoTimeEl.focus(); return; }
+    if (!text) { showToast("メモ内容を入力してください"); memoTextEl.focus(); return; }
+
+    const target = new Date(dtVal);
+    if (isNaN(target.getTime())) { showToast("日時の形式が不正です"); return; }
+    if (target.getTime() <= Date.now()) {
+      if (!confirm("指定した日時は既に過ぎています。すぐに通知しますか？")) return;
+    }
+
+    const memo = {
+      id: uid(),
+      text: text,
+      datetime: toLocalInputValue(target),
+      notified: false,
+      confirmed: false,
+      createdAt: new Date().toISOString()
+    };
+
+    memos.push(memo);
+    save();
+    render();
+    updateTitle();
+    scheduleAll();
+
+    memoTextEl.value = "";
+    showToast("メモをセットしました");
+  });
+
+  // ---------- 初期化 ----------
+  function init() {
+    load();
+    updatePermUI();
+
+    // デフォルト日時：5分後
+    const d = new Date(Date.now() + 5 * 60 * 1000);
+    memoTimeEl.value = toLocalInputValue(d);
+
+    render();
+    updateTitle();
+
+    // 初回：既に超過しているメモを通知
+    scheduleAll();
+
+    // 見逃しチェック
+    setInterval(checkOverdue, CHECK_INTERVAL);
+
+    // タブ復帰時に再スケジュール＋超過チェック
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) {
+        checkOverdue();
+        scheduleAll();
+      }
+    });
+
+    // 他タブでの変更を反映
+    window.addEventListener("storage", function (e) {
+      if (e.key === STORAGE_KEY) {
+        load();
+        render();
+        updateTitle();
+        scheduleAll();
+      }
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
