@@ -16,33 +16,18 @@
   }
   h1 { font-size: 20px; margin: 0 0 16px; }
   .card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    margin-bottom: 16px;
+    background: #fff; border-radius: 12px; padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px;
   }
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #444; }
   input[type="datetime-local"], textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccd;
-    border-radius: 8px;
-    font-size: 15px;
-    font-family: inherit;
-    margin-bottom: 12px;
-    background: #fff;
+    width: 100%; padding: 10px; border: 1px solid #ccd; border-radius: 8px;
+    font-size: 15px; font-family: inherit; margin-bottom: 12px; background: #fff;
   }
   textarea { resize: vertical; min-height: 60px; }
   button {
-    cursor: pointer;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-family: inherit;
-    font-weight: 600;
-    transition: opacity .15s;
+    cursor: pointer; border: none; border-radius: 8px; padding: 10px 16px;
+    font-size: 14px; font-family: inherit; font-weight: 600; transition: opacity .15s;
   }
   button:active { opacity: .7; }
   .btn-primary { background: #3b6ef5; color: #fff; width: 100%; }
@@ -53,74 +38,49 @@
   .perm-status { font-size: 13px; color: #666; margin-bottom: 12px; }
   .perm-status.ok { color: #2bb673; }
   .perm-status.ng { color: #c33; }
-  .memo-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 0;
-    border-bottom: 1px solid #eef;
-  }
+  .memo-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-bottom: 1px solid #eef; }
   .memo-item:last-child { border-bottom: none; }
   .memo-body { flex: 1; min-width: 0; }
   .memo-text { font-size: 15px; word-break: break-word; margin-bottom: 4px; }
   .memo-time { font-size: 12px; color: #888; }
   .memo-item.overdue .memo-text { color: #c33; font-weight: 600; }
   .memo-item.confirmed { opacity: .45; }
-  .badge {
-    display: inline-block;
-    font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 10px;
-    margin-left: 6px;
-    vertical-align: middle;
-    font-weight: 700;
-  }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; font-weight: 700; }
   .badge-wait { background: #e8efff; color: #3b6ef5; }
   .badge-over { background: #ffe5e5; color: #c33; }
   .badge-done { background: #e4f7ec; color: #2bb673; }
   .actions { display: flex; gap: 6px; flex-shrink: 0; }
   .empty { text-align: center; color: #999; font-size: 14px; padding: 20px 0; }
   .toast {
-    position: fixed;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%) translateY(20px);
-    background: #222;
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 24px;
-    font-size: 14px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .25s, transform .25s;
-    max-width: 90vw;
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+    background: #222; color: #fff; padding: 10px 18px; border-radius: 24px;
+    font-size: 14px; opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s; max-width: 90vw;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .inapp-banner {
-    background: #fff4e0;
-    border: 1px solid #ffd08a;
-    color: #8a5a00;
-    padding: 10px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 12px;
-    display: none;
+    background: #fff4e0; border: 1px solid #ffd08a; color: #8a5a00;
+    padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; display: none;
   }
   .inapp-banner.show { display: block; }
+  .sound-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .sound-row button { background: #eee; color: #333; }
 </style>
 </head>
 <body>
 
 <h1>📝 メモ通知</h1>
 
-<!-- 通知権限 -->
 <div class="card">
   <div class="perm-status" id="permStatus">通知権限：確認中…</div>
   <button class="btn-perm" id="permBtn">🔔 通知を許可する</button>
+  <div class="sound-row">
+    <button id="testSoundBtn" class="btn-small">🔊 通知音をテスト</button>
+    <span style="font-size:12px;color:#888;">※初回はクリックで音声を有効化</span>
+  </div>
   <div class="inapp-banner" id="inappBanner"></div>
 </div>
 
-<!-- 新規メモ -->
 <div class="card">
   <label for="memoTime">通知日時</label>
   <input type="datetime-local" id="memoTime">
@@ -129,7 +89,6 @@
   <button class="btn-primary" id="addBtn">＋ メモをセット</button>
 </div>
 
-<!-- メモ一覧 -->
 <div class="card">
   <label style="margin-bottom:12px;">セット済みメモ</label>
   <div id="memoList"></div>
@@ -143,10 +102,12 @@
 
   const STORAGE_KEY = "memo_notifier_memos_v1";
   const BASE_TITLE = "メモ通知";
-  const CHECK_INTERVAL = 10000; // 10秒ごとの見逃しチェック
+  const CHECK_INTERVAL = 10000;
 
   let memos = [];
-  let timers = {}; // id -> timeoutId
+  let timers = {};
+  let audioCtx = null;
+  let audioUnlocked = false;
 
   const $ = (id) => document.getElementById(id);
   const memoListEl = $("memoList");
@@ -156,23 +117,67 @@
   const permBtn = $("permBtn");
   const inappBanner = $("inappBanner");
 
-  // ---------- ユーティリティ ----------
-  function uid() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function pad(n) { return String(n).padStart(2, "0"); }
-
-  // datetime-local 形式 (YYYY-MM-DDTHH:mm) に変換
   function toLocalInputValue(d) {
     return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate())
       + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
-
   function formatTime(iso) {
     const d = new Date(iso);
     return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate())
       + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  // ---------- 音声 ----------
+  function initAudio() {
+    if (audioCtx) return audioCtx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audioCtx = new AC();
+    return audioCtx;
+  }
+
+  function unlockAudio() {
+    const ctx = initAudio();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().then(function () { audioUnlocked = true; }).catch(function () {});
+    } else {
+      audioUnlocked = true;
+    }
+  }
+
+  // 通知音を鳴らす（ピピッという2音）
+  function playNotificationSound() {
+    const ctx = initAudio();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(function () {});
+    }
+
+    const now = ctx.currentTime;
+
+    function beep(freq, start, duration, gainVal) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + start);
+      gain.gain.linearRampToValueAtTime(gainVal, now + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + duration + 0.05);
+    }
+
+    // 2音のチャイム（880Hz → 1174Hz）
+    beep(880, 0, 0.18, 0.3);
+    beep(1174, 0.22, 0.25, 0.3);
+    // 2回目
+    beep(880, 0.6, 0.18, 0.25);
+    beep(1174, 0.82, 0.25, 0.25);
   }
 
   // ---------- 永続化 ----------
@@ -181,14 +186,9 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       memos = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(memos)) memos = [];
-    } catch (e) {
-      memos = [];
-    }
+    } catch (e) { memos = []; }
   }
-
-  function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
-  }
+  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(memos)); }
 
   // ---------- 通知 ----------
   function canNotify() {
@@ -217,17 +217,18 @@
     memo.notifiedAt = new Date().toISOString();
     save();
 
+    // 音を鳴らす
+    playNotificationSound();
+
     if (canNotify()) {
       try {
         const n = new Notification("⏰ メモの時間です", {
           body: memo.text,
           tag: "memo-" + memo.id,
-          requireInteraction: true
+          requireInteraction: true,
+          silent: true // OS音と二重にならないよう抑制（音はWeb Audioで鳴らす）
         });
-        n.onclick = function () {
-          window.focus();
-          n.close();
-        };
+        n.onclick = function () { window.focus(); n.close(); };
       } catch (e) {
         showInApp("メモの時間です", memo.text);
       }
@@ -253,9 +254,8 @@
       const target = new Date(m.datetime).getTime();
       const delay = target - now;
       if (delay <= 0) {
-        // 既に時刻超過 → 即通知
         fireNotification(m);
-      } else if (delay <= 2147483647) { // setTimeout の上限対策
+      } else if (delay <= 2147483647) {
         timers[m.id] = setTimeout(function () {
           delete timers[m.id];
           fireNotification(m);
@@ -264,7 +264,6 @@
     });
   }
 
-  // 見逃しチェック（バックグラウンドでのタイマー間引き対策）
   function checkOverdue() {
     let changed = false;
     const now = Date.now();
@@ -277,11 +276,9 @@
     if (changed) { render(); updateTitle(); }
   }
 
-  // ---------- タイトル更新 ----------
+  // ---------- タイトル ----------
   function updateTitle() {
-    const n = memos.filter(function (m) {
-      return m.notified && !m.confirmed;
-    }).length;
+    const n = memos.filter(function (m) { return m.notified && !m.confirmed; }).length;
     document.title = (n > 0 ? "(" + n + ") " : "") + BASE_TITLE;
   }
 
@@ -296,7 +293,6 @@
       return;
     }
 
-    // 未確認 → 通知時刻順
     const sorted = memos.slice().sort(function (a, b) {
       if (a.confirmed !== b.confirmed) return a.confirmed ? 1 : -1;
       return new Date(a.datetime) - new Date(b.datetime);
@@ -306,7 +302,6 @@
 
     sorted.forEach(function (m) {
       const overdue = !m.notified && !m.confirmed && new Date(m.datetime).getTime() <= now;
-
       const item = document.createElement("div");
       item.className = "memo-item" + (overdue ? " overdue" : "") + (m.confirmed ? " confirmed" : "");
 
@@ -318,15 +313,10 @@
       text.textContent = m.text;
 
       let badge;
-      if (m.confirmed) {
-        badge = '<span class="badge badge-done">確認済み</span>';
-      } else if (m.notified) {
-        badge = '<span class="badge badge-over">未確認</span>';
-      } else if (overdue) {
-        badge = '<span class="badge badge-over">時間超過</span>';
-      } else {
-        badge = '<span class="badge badge-wait">待機中</span>';
-      }
+      if (m.confirmed) badge = '<span class="badge badge-done">確認済み</span>';
+      else if (m.notified) badge = '<span class="badge badge-over">未確認</span>';
+      else if (overdue) badge = '<span class="badge badge-over">時間超過</span>';
+      else badge = '<span class="badge badge-wait">待機中</span>';
       text.insertAdjacentHTML("beforeend", badge);
 
       const time = document.createElement("div");
@@ -346,9 +336,7 @@
         confirmBtn.addEventListener("click", function () {
           m.confirmed = true;
           m.notified = true;
-          save();
-          render();
-          updateTitle();
+          save(); render(); updateTitle();
         });
         actions.appendChild(confirmBtn);
       }
@@ -360,9 +348,7 @@
         if (!confirm("このメモを削除しますか？\n「" + m.text + "」")) return;
         if (timers[m.id]) { clearTimeout(timers[m.id]); delete timers[m.id]; }
         memos = memos.filter(function (x) { return x.id !== m.id; });
-        save();
-        render();
-        updateTitle();
+        save(); render(); updateTitle();
       });
       actions.appendChild(delBtn);
 
@@ -397,17 +383,24 @@
   }
 
   permBtn.addEventListener("click", function () {
+    unlockAudio();
     if (!("Notification" in window)) return;
     Notification.requestPermission().then(function () {
       updatePermUI();
-      if (Notification.permission === "granted") {
-        showToast("通知が許可されました");
-      }
+      if (Notification.permission === "granted") showToast("通知が許可されました");
     });
+  });
+
+  // 音声テスト
+  $("testSoundBtn").addEventListener("click", function () {
+    unlockAudio();
+    playNotificationSound();
+    showToast("通知音を再生しました");
   });
 
   // ---------- 追加 ----------
   $("addBtn").addEventListener("click", function () {
+    unlockAudio();
     const dtVal = memoTimeEl.value;
     const text = memoTextEl.value.trim();
 
@@ -430,11 +423,7 @@
     };
 
     memos.push(memo);
-    save();
-    render();
-    updateTitle();
-    scheduleAll();
-
+    save(); render(); updateTitle(); scheduleAll();
     memoTextEl.value = "";
     showToast("メモをセットしました");
   });
@@ -444,20 +433,15 @@
     load();
     updatePermUI();
 
-    // デフォルト日時：5分後
     const d = new Date(Date.now() + 5 * 60 * 1000);
     memoTimeEl.value = toLocalInputValue(d);
 
     render();
     updateTitle();
-
-    // 初回：既に超過しているメモを通知
     scheduleAll();
 
-    // 見逃しチェック
     setInterval(checkOverdue, CHECK_INTERVAL);
 
-    // タブ復帰時に再スケジュール＋超過チェック
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) {
         checkOverdue();
@@ -465,14 +449,18 @@
       }
     });
 
-    // 他タブでの変更を反映
     window.addEventListener("storage", function (e) {
       if (e.key === STORAGE_KEY) {
-        load();
-        render();
-        updateTitle();
-        scheduleAll();
+        load(); render(); updateTitle(); scheduleAll();
       }
+    });
+
+    // ユーザー操作で音声をアンロック
+    ["click", "keydown", "touchstart"].forEach(function (ev) {
+      document.addEventListener(ev, function once() {
+        unlockAudio();
+        document.removeEventListener(ev, once);
+      }, { once: true });
     });
   }
 
